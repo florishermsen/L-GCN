@@ -1,5 +1,5 @@
 # L-GCN
-End-to-end learning on complex multi-edge graphs with latent-graph convolutional networks.
+End-to-end learning from complex multigraphs with latent-graph convolutional networks.
 
 ### Dependencies
 See `requirements.txt`.
