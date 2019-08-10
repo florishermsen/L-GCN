@@ -35,22 +35,24 @@ class LGCN(MessagePassing):
             self.padding_func1 = torch.nn.ConstantPad2d((0,L,0,0),0)
             self.padding_func2 = torch.nn.ConstantPad2d((L,0,0,0),0)
             
+            
+    def get_embeddings(self, edge_attr, edge_attr_cutoffs):
+        # batches for increased performance and less GPU allocation
+        batches = []
+        for lims in edge_attr_cutoffs:
+            if lims[1] == -1:
+                batches.append(self.edge_nn(edge_attr[lims[0]:]))
+            else:
+                batches.append(self.edge_nn(edge_attr[lims[0]:lims[1],:,:lims[2]]))
+        return torch.cat(batches)
+    
 
     def forward(self, x, edge_index, edge_attr, edge_attr_cutoffs):
 
         # add on-vertex embeddings if required
         if self.DVE:
             row, col = edge_index
-
-            # batches for increased performance and less GPU allocation
-            batches = []
-            for lims in edge_attr_cutoffs:
-                if lims[1] == -1:
-                    batches.append(self.edge_nn(edge_attr[lims[0]:]))
-                else:
-                    batches.append(self.edge_nn(edge_attr[lims[0]:lims[1],:,:lims[2]]))
-            edge_embeddings = torch.cat(batches)
-            
+            edge_embeddings = self.get_embeddings(edge_attr,edge_attr_cutoffs)
             edge_embedding_collected1 = scatter_("mean",edge_embeddings,row)
             edge_embedding_collected2 = scatter_("mean",edge_embeddings,col)
                         
@@ -82,15 +84,8 @@ class LGCN(MessagePassing):
             row, col = edge_index[:,:int(edge_index.shape[1]/2)]
         else:
             row, col = edge_index
-        
-        # batches for increased performance and less memory allocation
-        batches = []
-        for lims in edge_attr_cutoffs:
-            if lims[1] == -1:
-                batches.append(self.edge_nn(edge_attr[lims[0]:]))
-            else:
-                batches.append(self.edge_nn(edge_attr[lims[0]:lims[1],:,:lims[2]]))
-        first_weights = torch.cat(batches)
+
+        first_weights = self.get_embeddings(edge_attr,edge_attr_cutoffs)
 
         first_weights = first_weights.view(-1,self.L) #fix for L=1
         weights = self.self_loop_weight.repeat(row.size(0),1)
