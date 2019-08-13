@@ -43,21 +43,25 @@ class LGCN(MessagePassing):
             
             
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
-        # batches for increased performance
-        #   sorted and grouped by original size of multi-edge population
-        #   reduces memory allocation and increases training speed
-        #      future edits will make batching optional
-        batches = []
-        for lims in edge_attr_cutoffs:
-            if lims[1] == -1:
-                batches.append(self.edge_nn(edge_attr[lims[0]:]))
-            else:
-                batches.append(self.edge_nn(edge_attr[lims[0]:lims[1],:,:lims[2]]))
-        return torch.cat(batches)
+        if edge_attr_cutoffs is not None:
+            # batches for increased performance
+            #   sorted and grouped by original size of multi-edge population
+            #   reduces memory allocation and increases training speed
+            #      future edits will make batching optional
+            batches = []
+            for lims in edge_attr_cutoffs:
+                if lims[1] == -1:
+                    batches.append(self.edge_nn(edge_attr[lims[0]:]))
+                else:
+                    batches.append(self.edge_nn(edge_attr[lims[0]:lims[1],:,:lims[2]]))
+            return torch.cat(batches)
+        else:
+            return self.edge_nn(edge_attr)
+            
     
     
 
-    def forward(self, x, edge_index, edge_attr, edge_attr_cutoffs):
+    def forward(self, x, edge_index, edge_attr, edge_attr_cutoffs=None):
         # add on-vertex embeddings if required
         if self.DVE:
             row, col = edge_index
