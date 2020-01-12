@@ -84,7 +84,7 @@ class LGCN(MessagePassing):
             # append averages of in and outgoing edge embeddings to original node features
             x = torch.cat((x, edge_embedding_collected1, edge_embedding_collected2), 1)
         
-        edge_index = add_self_loops(edge_index, num_nodes=x.size(0))
+        edge_index = add_self_loops(edge_index, num_nodes=x.size(0))[0]
         
         if self.make_bidirectional:
             # flip indices and append to introduce bidirectional propagation
