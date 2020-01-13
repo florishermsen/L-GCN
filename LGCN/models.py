@@ -1,4 +1,4 @@
-import toch
+import torch
 from torch.nn import Parameter, Linear, ConstantPad2d
 import torch.nn.functional as F
 
