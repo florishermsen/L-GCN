@@ -21,7 +21,7 @@ class LGCN(MessagePassing):
         self.make_bidirectional = make_bidirectional
         
         if self.DVE:
-            in_channels += 2*L
+            in_channels += 2 * L
         self.in_channels = in_channels
         
         self.self_loop_weight = Parameter(torch.ones(L))
@@ -30,23 +30,23 @@ class LGCN(MessagePassing):
         # two linear layers instead of one in case of extra per-message
         #   nonlinearity
         if self.neighbor_nl:
-            self.lin = Linear(L*in_channels, 2*out_channels)
-            self.lin2 = Linear(2*out_channels, out_channels)
+            self.lin = Linear(L * in_channels, 2 * out_channels)
+            self.lin2 = Linear(2 * out_channels, out_channels)
         
         # expansion of in-channels in case of bidirectionality
         #   introduced inside the architecture itself
         if self.make_bidirectional:
-            self.lin = Linear(2*L*in_channels, out_channels)
+            self.lin = Linear(2 * L * in_channels, out_channels)
             if self.neighbor_nl:
                 # only need to redefine first layer,
                 #   second remains the same
-                self.lin = Linear(2*L*in_channels, 2*out_channels)
+                self.lin = Linear(2 * L * in_channels, 2 * out_channels)
 
             # padding functions for the latent representations
             #   zeros appended to original, zeros prepended to
             #   carbon copy in other direction
-            self.padding_func1 = ConstantPad2d((0,L,0,0),0)
-            self.padding_func2 = ConstantPad2d((L,0,0,0),0)
+            self.padding_func1 = ConstantPad2d((0,L,0,0), 0)
+            self.padding_func2 = ConstantPad2d((L,0,0,0), 0)
             
             
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
@@ -59,18 +59,16 @@ class LGCN(MessagePassing):
             for lims in edge_attr_cutoffs:
                 if lims[1] == -1:
                     batches.append(
-                        self.edge_nn(edge_attr[lims[0]:])
+                        self.edge_nn(
+                            edge_attr[lims[0]:]
+                        )
                     )
                 else:
                     batches.append(
-                            self.edge_nn(
-                                    edge_attr[
-                                        lims[0]:lims[1],
-                                        :,
-                                        :lims[2]
-                                    ]
-                                )
+                        self.edge_nn(
+                            edge_attr[lims[0]:lims[1], :, :lims[2]]
                         )
+                    )
             return torch.cat(batches)
         else:
             return self.edge_nn(edge_attr)
@@ -78,6 +76,7 @@ class LGCN(MessagePassing):
 
     def forward(self, x, edge_index, edge_attr, *,
                 edge_attr_cutoffs=None):
+        
         # add on-vertex embeddings if required
         if self.DVE:
             row, col = edge_index
