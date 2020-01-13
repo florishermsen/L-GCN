@@ -49,7 +49,6 @@ class LGCN(MessagePassing):
             self.padding_func2 = ConstantPad2d((L,0,0,0),0)
             
             
-            
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
         if edge_attr_cutoffs is not None:
             # batches for increased performance
@@ -224,6 +223,7 @@ class LGCN(MessagePassing):
 
         return messages
     
+
     def update(self, aggr_out):
         # aggregate and return result
         return aggr_out
