@@ -80,24 +80,18 @@ class LGCN(MessagePassing):
         # add on-vertex embeddings if required
         if self.DVE:
             row, col = edge_index
-            edge_embeddings = self.get_embeddings(
-                edge_attr,
-                edge_attr_cutoffs
-            )
+            edge_embeddings = self.get_embeddings(edge_attr,
+                                                  edge_attr_cutoffs)
 
             # collect outgoing edge embeddings
-            edge_embedding_collected1 = scatter_(
-                "mean",
-                edge_embeddings,
-                row
-            )
+            edge_embedding_collected1 = scatter_("mean",
+                                                 edge_embeddings,
+                                                 row)
 
             # collect incoming edge embeddings 
-            edge_embedding_collected2 = scatter_(
-                "mean",
-                edge_embeddings,
-                col
-            )
+            edge_embedding_collected2 = scatter_("mean", 
+                                                 edge_embeddings,
+                                                 col)
                         
             # protection against last node in the list having only
             #   one associated edge direction because scatter method
@@ -119,48 +113,35 @@ class LGCN(MessagePassing):
             if shape_difference2 > 0:
                 padding_func = ConstantPad2d(
                     (0, 0, 0, shape_difference2),
-                    0
-                )
+                    0)
                 edge_embedding_collected2 = padding_func(
                     edge_embedding_collected2
                 )
             
             # append averages of in and outgoing edge embeddings to
             #   original node features
-            x = torch.cat(
-                (
-                    x,
-                    edge_embedding_collected1,
-                    edge_embedding_collected2
-                ),
-                1
-            )
+            x = torch.cat((x,
+                           edge_embedding_collected1,
+                           edge_embedding_collected2),
+                          1)
         
-        edge_index, _ = add_self_loops(
-            edge_index,
-            num_nodes=x.size(0)
-        )
+        edge_index, _ = add_self_loops(edge_index,
+                                       num_nodes=x.size(0))
         
         if self.make_bidirectional:
             # flip indices and append to introduce bidirectional
             #   propagation. Note that this does require different
             #   treatment, see padding functions and expansion of
             #   latent representations
-            edge_index = torch.cat(
-                (
-                    edge_index,
-                    edge_index.flip(0)
-                ),
-                dim=1
-            )
+            edge_index = torch.cat((edge_index,
+                                    edge_index.flip(0)),
+                                   dim=1)
 
-        return self.propagate(
-            edge_index,
-            size=(x.size(0), x.size(0)),
-            x=x, 
-            edge_attr=edge_attr,
-            edge_attr_cutoffs=edge_attr_cutoffs
-        )
+        return self.propagate(edge_index,
+                              size=(x.size(0), x.size(0)),
+                              x=x,
+                              edge_attr=edge_attr,
+                              edge_attr_cutoffs=edge_attr_cutoffs)
     
     
     def message(self, x_j, edge_index, size, edge_attr,
@@ -172,10 +153,8 @@ class LGCN(MessagePassing):
         else:
             row, col = edge_index
 
-        first_weights = self.get_embeddings(
-            edge_attr,
-            edge_attr_cutoffs
-        )
+        first_weights = self.get_embeddings(edge_attr,
+                                            edge_attr_cutoffs)
 
         # fix for L=1:
         first_weights = first_weights.view(-1, self.L)
@@ -186,12 +165,8 @@ class LGCN(MessagePassing):
 
         if self.make_bidirectional:
             # convert to bidirectional again
-            weights = torch.cat(
-                (
-                    self.padding_func1(weights),
-                    self.padding_func2(weights)
-                )
-            )
+            weights = torch.cat((self.padding_func1(weights),
+                                 self.padding_func2(weights)))
             row, col = edge_index
         
         # epsilon due to future division
@@ -214,11 +189,9 @@ class LGCN(MessagePassing):
         #   allows for additional nonlinarity on a per-message
         #   / per-neighbor basis
         if self.neighbor_nl:
-            messages = F.dropout(
-                messages,
-                p=0.2,
-                training=self.training
-            )
+            messages = F.dropout(messages,
+                                 p=0.2,
+                                 training=self.training)
             messages = torch.tanh(messages)
             messages = self.lin2(messages)
 
