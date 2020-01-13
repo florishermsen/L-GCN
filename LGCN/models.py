@@ -47,8 +47,8 @@ class LGCN(MessagePassing):
             #   carbon copy in other direction
             self.padding_func1 = ConstantPad2d((0,L,0,0), 0)
             self.padding_func2 = ConstantPad2d((L,0,0,0), 0)
-            
-            
+
+
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
         if edge_attr_cutoffs is not None:
             # batches for increased performance
@@ -76,7 +76,7 @@ class LGCN(MessagePassing):
 
     def forward(self, x, edge_index, edge_attr, *,
                 edge_attr_cutoffs=None):
-        
+
         # add on-vertex embeddings if required
         if self.DVE:
             row, col = edge_index
@@ -107,7 +107,7 @@ class LGCN(MessagePassing):
                                  - edge_embedding_collected1.shape[0])
             if shape_difference1 > 0:
                 padding_func = ConstantPad2d(
-                    (0,0,0,shape_difference1),
+                    (0, 0, 0, shape_difference1),
                     0
                 )
                 edge_embedding_collected1 = padding_func(
@@ -118,7 +118,7 @@ class LGCN(MessagePassing):
                                  - edge_embedding_collected2.shape[0])
             if shape_difference2 > 0:
                 padding_func = ConstantPad2d(
-                    (0,0,0,shape_difference2),
+                    (0, 0, 0, shape_difference2),
                     0
                 )
                 edge_embedding_collected2 = padding_func(
@@ -128,9 +128,11 @@ class LGCN(MessagePassing):
             # append averages of in and outgoing edge embeddings to
             #   original node features
             x = torch.cat(
-                (x,
-                 edge_embedding_collected1,
-                 edge_embedding_collected2),
+                (
+                    x,
+                    edge_embedding_collected1,
+                    edge_embedding_collected2
+                ),
                 1
             )
         
@@ -154,7 +156,7 @@ class LGCN(MessagePassing):
 
         return self.propagate(
             edge_index,
-            size=(x.size(0),x.size(0)),
+            size=(x.size(0), x.size(0)),
             x=x, 
             edge_attr=edge_attr,
             edge_attr_cutoffs=edge_attr_cutoffs
@@ -166,7 +168,7 @@ class LGCN(MessagePassing):
 
         if self.make_bidirectional:
             # back to unidirectionality for reduced learning time
-            row, col = edge_index[:,:int(edge_index.shape[1]/2)]
+            row, col = edge_index[:, :int(edge_index.shape[1] / 2)]
         else:
             row, col = edge_index
 
@@ -176,9 +178,9 @@ class LGCN(MessagePassing):
         )
 
         # fix for L=1:
-        first_weights = first_weights.view(-1,self.L)
+        first_weights = first_weights.view(-1, self.L)
 
-        weights = self.self_loop_weight.repeat(row.size(0),1)
+        weights = self.self_loop_weight.repeat(row.size(0), 1)
         # because self-loops, without edge features are appended
         weights[:first_weights.size(0)] = first_weights
 
@@ -194,17 +196,17 @@ class LGCN(MessagePassing):
         
         # epsilon due to future division
         deg_weighted = scatter_("add",weights,col) + 1e-5 
-        deg_weighted_inv = 1/deg_weighted
+        deg_weighted_inv = 1 / deg_weighted
         norm_weighted = deg_weighted_inv[col]
         
         # make tensor product of (latent) edge features and node
         #   features
         embedding_matrix = torch.matmul(
-            norm_weighted.view(row.size(0),-1,1),
-            x_j.view(row.size(0),1,-1)
+            norm_weighted.view(row.size(0), -1, 1),
+            x_j.view(row.size(0), 1, -1)
         )
         # vectorize:
-        embedding_flattened = embedding_matrix.view(row.size(0),-1)
+        embedding_flattened = embedding_matrix.view(row.size(0), -1)
         
         messages = self.lin(embedding_flattened)
         
@@ -226,4 +228,3 @@ class LGCN(MessagePassing):
     def update(self, aggr_out):
         # aggregate and return result
         return aggr_out
-
