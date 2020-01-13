@@ -45,8 +45,8 @@ class LGCN(MessagePassing):
             # padding functions for the latent representations
             #   zeros appended to original, zeros prepended to
             #   carbon copy in other direction
-            self.padding_func1 = ConstantPad2d((0,L,0,0), 0)
-            self.padding_func2 = ConstantPad2d((L,0,0,0), 0)
+            self.padding_func1 = ConstantPad2d((0, L, 0, 0), 0)
+            self.padding_func2 = ConstantPad2d((L, 0, 0, 0), 0)
 
 
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
