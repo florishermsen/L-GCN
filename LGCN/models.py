@@ -44,17 +44,18 @@ class LGCN(MessagePassing):
 
             # padding functions for the latent representations
             #   zeros appended to original, zeros prepended to
-            #   carbon copy in other direction
+            #   carbon copy in other direction.
             self.padding_func1 = ConstantPad2d((0, L, 0, 0), 0)
             self.padding_func2 = ConstantPad2d((L, 0, 0, 0), 0)
 
 
     def get_embeddings(self, edge_attr, edge_attr_cutoffs):
         if edge_attr_cutoffs is not None:
-            # batches for increased performance
+            # batches for increased performance in case of irregular
+            #   number of edges per node pair.
             #   sorted and grouped by original size of multi-edge
             #   population to reduce memory allocation and increase
-            #   training speed future edits will make batching optional
+            #   training speed.
             batches = []
             for lims in edge_attr_cutoffs:
                 if lims[1] == -1:
@@ -135,7 +136,7 @@ class LGCN(MessagePassing):
             #   latent representations
             edge_index = torch.cat((edge_index,
                                     edge_index.flip(0)),
-                                   dim=1)
+                                   dim=1)       
 
         return self.propagate(edge_index,
                               size=(x.size(0), x.size(0)),
@@ -144,14 +145,14 @@ class LGCN(MessagePassing):
                               edge_attr_cutoffs=edge_attr_cutoffs)
     
     
-    def message(self, x_j, edge_index, size, edge_attr,
+    def message(self, x_j, edge_index_i, edge_index_j, edge_attr,
                 edge_attr_cutoffs):
+        
+        row, col = edge_index_j, edge_index_i
 
         if self.make_bidirectional:
-            # back to unidirectionality for reduced learning time
-            row, col = edge_index[:, :int(edge_index.shape[1] / 2)]
-        else:
-            row, col = edge_index
+            cutoff = int(row.shape[0] / 2)
+            row, col = row[:cutoff], col[:cutoff]
 
         first_weights = self.get_embeddings(edge_attr,
                                             edge_attr_cutoffs)
@@ -160,16 +161,16 @@ class LGCN(MessagePassing):
         first_weights = first_weights.view(-1, self.L)
 
         weights = self.self_loop_weight.repeat(row.size(0), 1)
-        # because self-loops, without edge features are appended
+        # because self-loops (without edge features) are appended
         weights[:first_weights.size(0)] = first_weights
 
         if self.make_bidirectional:
-            # convert to bidirectional again
+            # convert to bidirectional
             weights = torch.cat((self.padding_func1(weights),
                                  self.padding_func2(weights)))
-            row, col = edge_index
+            row, col = edge_index_j, edge_index_i
         
-        # epsilon due to future division
+        # epsilon due to upcoming division
         deg_weighted = scatter_("add",weights,col) + 1e-5 
         deg_weighted_inv = 1 / deg_weighted
         norm_weighted = deg_weighted_inv[col]
