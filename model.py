@@ -7,7 +7,7 @@ from torch_geometric.utils import add_self_loops, scatter_
 
 
 class LGCN(MessagePassing):
-    def __init__(self, in_channels, out_channels, edge_nn, *, L=4,
+    def __init__(self, in_channels, out_channels, edge_network, *, L=4,
                  make_bidirectional=False, neighbor_nl=False):
 
         # add, because we do our own normalization
@@ -15,7 +15,7 @@ class LGCN(MessagePassing):
         
         self.L = L
         self.neighbor_nl = neighbor_nl
-        self.edge_nn = edge_nn
+        self.edge_network = edge_network
         self.make_bidirectional = make_bidirectional
         
         self.in_channels = in_channels
@@ -56,19 +56,19 @@ class LGCN(MessagePassing):
             for lims in edge_attr_cutoffs:
                 if lims[1] == -1:
                     batches.append(
-                        self.edge_nn(
+                        self.edge_network(
                             edge_attr[lims[0]:]
                         )
                     )
                 else:
                     batches.append(
-                        self.edge_nn(
+                        self.edge_network(
                             edge_attr[lims[0]:lims[1], :, :lims[2]]
                         )
                     )
             return torch.cat(batches)
         else:
-            return self.edge_nn(edge_attr)
+            return self.edge_network(edge_attr)
             
 
     def forward(self, x, edge_index, edge_attr, *,
