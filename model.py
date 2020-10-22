@@ -8,20 +8,16 @@ from torch_geometric.utils import add_self_loops, scatter_
 
 class LGCN(MessagePassing):
     def __init__(self, in_channels, out_channels, edge_nn, *, L=4,
-                 make_bidirectional=False, neighbor_nl=False,
-                 DVE=False):
+                 make_bidirectional=False, neighbor_nl=False):
 
         # add, because we do our own normalization
         super().__init__(aggr='add')
         
         self.L = L
-        self.DVE = DVE
         self.neighbor_nl = neighbor_nl
         self.edge_nn = edge_nn
         self.make_bidirectional = make_bidirectional
         
-        if self.DVE:
-            in_channels += 2 * L
         self.in_channels = in_channels
         
         self.self_loop_weight = Parameter(torch.ones(L))
@@ -78,66 +74,12 @@ class LGCN(MessagePassing):
     def forward(self, x, edge_index, edge_attr, *,
                 edge_attr_cutoffs=None):
 
-        # add on-vertex embeddings if required
-        if self.DVE:
-            row, col = edge_index
-            edge_embeddings = self.get_embeddings(
-                edge_attr,
-                edge_attr_cutoffs
-            )
+        # add self-loops to allow retainment of properties
+        edge_index, _ = add_self_loops(
+            edge_index,
+            num_nodes=x.size(0)
+        )
 
-            # collect outgoing edge embeddings
-            edge_embedding_collected1 = scatter_(
-                "mean",
-                edge_embeddings,
-                row
-            )
-
-            # collect incoming edge embeddings 
-            edge_embedding_collected2 = scatter_(
-                "mean", 
-                edge_embeddings,
-                col
-            )
-                        
-            # protection against last node in the list having only
-            #   one associated edge direction because scatter method
-            #   does not know number of nodes, only knows indices it
-            #   receives
-            shape_difference1 = (x.shape[0]
-                                 - edge_embedding_collected1.shape[0])
-            if shape_difference1 > 0:
-                padding_func = ConstantPad2d(
-                    (0, 0, 0, shape_difference1),
-                    0
-                )
-                edge_embedding_collected1 = padding_func(
-                    edge_embedding_collected1
-                )
-                
-            shape_difference2 = (
-                x.shape[0] - edge_embedding_collected2.shape[0]
-            )
-            if shape_difference2 > 0:
-                padding_func = ConstantPad2d(
-                    (0, 0, 0, shape_difference2),
-                    0
-                )
-                edge_embedding_collected2 = padding_func(
-                    edge_embedding_collected2
-                )
-            
-            # append averages of in and outgoing edge embeddings to
-            #   original node features
-            x = torch.cat(
-                (
-                    x,
-                    edge_embedding_collected1,
-                    edge_embedding_collected2
-                ),
-                1
-            )
-        
         if self.make_bidirectional:
             # flip indices and append to introduce bidirectional
             #   propagation. Note that this does require different
@@ -150,11 +92,6 @@ class LGCN(MessagePassing):
                 ),
                 dim=1
             )
-
-        edge_index, _ = add_self_loops(
-            edge_index,
-            num_nodes=x.size(0)
-        )
 
         return self.propagate(
             edge_index,
