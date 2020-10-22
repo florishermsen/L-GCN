@@ -1,5 +1,5 @@
 # L-GCN
-End-to-end learning from complex multigraphs with latent-graph convolutional networks.
+End-to-End Learning from Complex Multigraphs with Latent-Graph Convolutional Networks.
 
 ### Dependencies
 See `requirements.txt` or `environment.yml` (conda).
