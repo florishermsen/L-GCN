@@ -1,8 +1,7 @@
 # L-GCN
-An implementation of Latent-Graph Convolutional Networks based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric), as explained in our paper:
+An implementation of Latent-Graph Convolutional Networks based on [PyTorch Geometric](https://github.com/rusty1s/pytorch_geometric) from the article:
 
-Floris A.W. Hermsen, Peter Bloem, Fabian Jansen & Wolf B.W. Vos, [End-to-End Learning from Complex Multigraphs with Latent-Graph Convolutional Networks](https://arxiv.org/abs/1908.05365).
-
+Floris A.W. Hermsen, Peter Bloem, Fabian Jansen & Wolf B.W. Vos, [End-to-End Learning from Complex Multigraphs with Latent-Graph Convolutional Networks](https://arxiv.org/abs/1908.05365). arXiv preprint [arXiv:1908.05365](https://arxiv.org/abs/1908.05365), 2019 — arxiv.org.
 
 ### Dependencies
 See `requirements.txt` or `environment.yml` (conda).
